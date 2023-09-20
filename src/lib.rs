@@ -1,5 +1,9 @@
 use std::io;
 
+/// Read the first n lines of a file that is wrapped in a BufReader
+/// This function alters the iterator that represents the current location in the file, leaving it
+/// at line n+1. The first n lines are concatinated into a string that is returned at the end of
+/// the function
 pub fn read_n_lines<'a>(n: u32, lines: &'a mut impl Iterator<Item = io::Result<String>>) -> io::Result<String> {
     let mut res = String::new();
     for _i in 0..n {
@@ -16,6 +20,7 @@ pub fn read_n_lines<'a>(n: u32, lines: &'a mut impl Iterator<Item = io::Result<S
     Ok(res)
 }
 
+///
 pub fn read_until_line_starts_with<'a>(matchstr: &'a str, lines: &'a mut impl Iterator<Item = io::Result<String>>) -> io::Result<String> {
     let mut res = String::new();
     loop {
@@ -40,6 +45,10 @@ pub fn filter_out_comment_lines(comment_char: char, lines: impl Iterator<Item = 
     )
 }
 
+pub fn split_line_into_streams<'a>(stream_delimiter: char, line: &'a String) -> Vec<Vec<&'a str>> {
+    line.split(stream_delimiter).map(|s| s.split(&[',', ' ']).filter(|ss| ss.len() != 0).collect()).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -47,6 +56,7 @@ mod tests {
     use std::io::Cursor;
     use std::fs::File;
     use std::io::BufRead;
+    use std::iter::zip;
     #[test]
     fn test_read_n_lines() {
         let mut file = BufReader::new(File::open("tests/read_n_lines_test").unwrap()).lines(); 
@@ -90,5 +100,16 @@ mod tests {
     }
 
     #[test]
+    fn test_stream_spltting() {
+        let line = "1, 2 3, 5.15, | 6 7, 8".to_string();
+        let reference = vec![vec!["1", "2", "3", "5.15"], vec!["6", "7", "8"]];
+        let numbers: Vec<Vec<&str>> = split_line_into_streams('|', &line);
+        for content in zip(numbers, reference) {
+            let values = zip(content.0, content.1);
+            for (v, r) in values {
+                assert_eq!(v, r);
+            }
+        }
+    }
 }
 
